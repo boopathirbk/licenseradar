@@ -1,0 +1,52 @@
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+config/local.php
+
+# ── Composer ──────────────────────────────────────────────────────────────────
+# vendor/ is excluded from dev — bundled separately in GitHub Releases ZIP
+/vendor/
+composer.lock
+
+# ── Cache & Storage ───────────────────────────────────────────────────────────
+/storage/cache/
+/storage/logs/
+/storage/sessions/
+
+# ── Setup Wizard (self-deletes after install) ─────────────────────────────────
+public/setup.php.done
+
+# ── OS Files ──────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+# ── IDE & Editors ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ── Node (for GitHub Pages site build) ───────────────────────────────────────
+node_modules/
+dist/
+.cache/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+*.zip
+*.tar.gz
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── PHP ───────────────────────────────────────────────────────────────────────
+*.phar
