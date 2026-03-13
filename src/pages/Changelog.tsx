@@ -4,12 +4,29 @@ import { ICONS } from '../constants';
 interface ChangelogEntry {
     version: string;
     date: string;
-    tag: 'upcoming' | 'planned';
+    tag: 'released' | 'upcoming' | 'planned';
     tagColor: string;
     changes: string[];
 }
 
 const entries: ChangelogEntry[] = [
+    {
+        version: 'v0.1.0',
+        date: '13 March 2026',
+        tag: 'released',
+        tagColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+        changes: [
+            'Showcase website launched on GitHub Pages',
+            'React 19 + TypeScript + TailwindCSS v4 + Vite',
+            'Pages: Home, Docs, Security, Changelog, Author, Donate',
+            'Geist design system with dark/light mode toggle',
+            'WCAG 2.2 AA accessible — skip links, ARIA landmarks, focus rings, reduced motion',
+            'SEO: meta tags, Open Graph, Twitter cards, JSON-LD structured data',
+            'GitHub Actions auto-deploy workflow',
+            'Self-hosted Geist variable fonts (woff2)',
+            'Radar-themed SVG favicon',
+        ],
+    },
     {
         version: 'v1.0.0',
         date: 'Coming Soon',
@@ -85,16 +102,18 @@ const Changelog: React.FC = () => {
                     {entries.map((entry, i) => (
                         <article key={i} className="relative pl-8 border-l-2 dark:border-zinc-800 border-zinc-200">
                             {/* Timeline dot */}
-                            <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 ${entry.tag === 'upcoming'
-                                ? 'bg-amber-500 border-amber-500 animate-pulse-dot'
-                                : 'dark:bg-zinc-800 bg-zinc-200 dark:border-zinc-700 border-zinc-300'
+                            <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 ${entry.tag === 'released'
+                                ? 'bg-emerald-500 border-emerald-500'
+                                : entry.tag === 'upcoming'
+                                    ? 'bg-amber-500 border-amber-500 animate-pulse-dot'
+                                    : 'dark:bg-zinc-800 bg-zinc-200 dark:border-zinc-700 border-zinc-300'
                                 }`} aria-hidden="true" />
 
                             <div className="p-6 rounded-2xl dark:bg-zinc-900/40 bg-white border dark:border-zinc-800/50 border-zinc-200 space-y-4">
                                 <div className="flex flex-wrap items-center gap-3">
                                     <h2 className="text-xl font-bold dark:text-white text-zinc-900 tracking-tight">{entry.version}</h2>
                                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${entry.tagColor}`}>
-                                        {entry.tag === 'upcoming' ? 'Upcoming' : 'Planned'}
+                                        {entry.tag === 'released' ? 'Released' : entry.tag === 'upcoming' ? 'Upcoming' : 'Planned'}
                                     </span>
                                     <span className="text-xs dark:text-zinc-500 text-zinc-500 flex items-center gap-1">
                                         <ICONS.Calendar className="w-3 h-3" aria-hidden="true" /> {entry.date}
@@ -103,9 +122,11 @@ const Changelog: React.FC = () => {
                                 <ul className="space-y-2">
                                     {entry.changes.map((change, j) => (
                                         <li key={j} className="flex items-start gap-2.5 text-sm dark:text-zinc-400 text-zinc-600">
-                                            {entry.tag === 'upcoming'
-                                                ? <ICONS.Zap className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
-                                                : <ICONS.CheckCircle2 className="w-3.5 h-3.5 dark:text-zinc-600 text-zinc-400 shrink-0 mt-0.5" aria-hidden="true" />
+                                            {entry.tag === 'released'
+                                                ? <ICONS.CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" />
+                                                : entry.tag === 'upcoming'
+                                                    ? <ICONS.Zap className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
+                                                    : <ICONS.CheckCircle2 className="w-3.5 h-3.5 dark:text-zinc-600 text-zinc-400 shrink-0 mt-0.5" aria-hidden="true" />
                                             }
                                             <span>{change}</span>
                                         </li>
