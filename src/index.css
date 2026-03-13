@@ -1,0 +1,243 @@
+/* ═════════════════════════════════════════════════════════════════════════════
+   LicenseRadar — Design System
+   TailwindCSS v4 · Geist Font · Dark/Light Mode · WCAG 2.2 AA
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+/* Geist Fonts — self-hosted variable woff2 */
+@font-face {
+    font-family: 'Geist';
+    src: url('/licenseradar/fonts/Geist-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Geist Mono';
+    src: url('/licenseradar/fonts/GeistMono-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* TailwindCSS v4 — CSS-first import */
+@import "tailwindcss";
+
+/* Enable class-based dark mode (default is media-query) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══ THEME — Custom Design Tokens ═══ */
+@theme {
+    /* Fonts */
+    --font-sans: 'Geist', 'Geist Sans', 'Inter', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+    /* Custom zinc shade */
+    --color-zinc-925: #111113;
+
+    /* Accent palette */
+    --color-accent: #38bdf8;
+    --color-accent-dark: #0284c7;
+    --color-success: #4ade80;
+    --color-success-dark: #16a34a;
+    --color-warning: #fbbf24;
+    --color-warning-dark: #d97706;
+    --color-danger: #fb7185;
+    --color-danger-dark: #e11d48;
+    --color-violet: #a78bfa;
+
+    /* Animations */
+    --animate-fade-in: fadeIn 0.5s ease-out forwards;
+    --animate-fade-up: fadeUp 0.6s ease-out forwards;
+    --animate-slide-down: slideDown 0.3s ease-out forwards;
+    --animate-glow: glow 3s ease-in-out infinite alternate;
+    --animate-shimmer: shimmer 2s linear infinite;
+    --animate-pulse-dot: pulseDot 2s ease-in-out infinite;
+
+    /* Keyframes */
+    @keyframes fadeIn {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+
+    @keyframes fadeUp {
+        0% { opacity: 0; transform: translateY(16px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+        0% { opacity: 0; transform: translateY(-8px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes glow {
+        0% { opacity: 0.4; }
+        100% { opacity: 0.7; }
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    @keyframes pulseDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.5); }
+    }
+}
+
+/* ═══ GLOBAL ═══ */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ═══ TEXT SELECTION ═══ */
+::selection {
+    background: #0ea5e9;
+    color: #fff;
+}
+
+::-moz-selection {
+    background: #0ea5e9;
+    color: #fff;
+}
+
+.light ::selection {
+    background: #0284c7;
+    color: #fff;
+}
+
+.light ::-moz-selection {
+    background: #0284c7;
+    color: #fff;
+}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+}
+
+.light ::-webkit-scrollbar-thumb {
+    background: #d4d4d8;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+    background: #a1a1aa;
+}
+
+/* ═══ DOT GRID BACKGROUND ═══ */
+.dot-grid {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.light .dot-grid {
+    background-image: radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+}
+
+/* ═══ RADIAL GLOW ═══ */
+.hero-glow {
+    background: radial-gradient(ellipse 60% 50% at 50% -10%, rgba(56, 189, 248, 0.12) 0%, transparent 60%);
+}
+
+.light .hero-glow {
+    background: radial-gradient(ellipse 60% 50% at 50% -10%, rgba(14, 165, 233, 0.1) 0%, transparent 60%);
+}
+
+/* ═══ GLASS CARD ═══ */
+.glass-card {
+    background: rgba(24, 24, 27, 0.5);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(63, 63, 70, 0.4);
+}
+
+.light .glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(212, 212, 216, 0.8);
+}
+
+/* ═══ GRADIENT BORDER ═══ */
+.gradient-border {
+    position: relative;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(168, 85, 247, 0.3), rgba(244, 63, 94, 0.2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* ═══ FROSTED HEADER ═══ */
+.frosted-header {
+    background: rgba(9, 9, 11, 0.8);
+    backdrop-filter: blur(16px) saturate(1.8);
+    border-bottom: 1px solid rgba(63, 63, 70, 0.3);
+}
+
+.light .frosted-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px) saturate(1.8);
+    border-bottom: 1px solid rgba(212, 212, 216, 0.8);
+}
+
+/* ═══ FOCUS RING — WCAG 2.4.7 + 2.4.13 Focus Appearance ═══ */
+*:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.light *:focus-visible {
+    outline-color: #0284c7;
+}
+
+/* ═══ SMOOTH TOGGLE ═══ */
+.toggle-track {
+    transition: background-color 0.2s ease;
+}
+
+.toggle-thumb {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══ LIGHT MODE ═══ */
+.light {
+    color-scheme: light;
+}
+
+/* ═══ REDUCED MOTION — WCAG 2.3.3 ═══ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
