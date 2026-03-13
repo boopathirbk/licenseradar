@@ -1,0 +1,24 @@
+{
+    "name": "boopathirbk/licenseradar-app",
+    "description": "LicenseRadar — Free Microsoft 365 License Audit Tool",
+    "type": "project",
+    "license": "Apache-2.0",
+    "require": {
+        "php": ">=8.2",
+        "guzzlehttp/guzzle": "^7.10",
+        "phpmailer/phpmailer": "^7.0",
+        "spomky-labs/otphp": "^11.4",
+        "web-auth/webauthn-lib": "^5.2",
+        "dompdf/dompdf": "^3.1",
+        "phpoffice/phpspreadsheet": "^5.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "LicenseRadar\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
