@@ -3,11 +3,14 @@
 .env.local
 .env.production
 config/local.php
+app/.env
 
 # ── Composer ──────────────────────────────────────────────────────────────────
 # vendor/ is excluded from dev — bundled separately in GitHub Releases ZIP
 /vendor/
+app/vendor/
 composer.lock
+app/composer.lock
 
 # ── Cache & Storage ───────────────────────────────────────────────────────────
 /storage/cache/
