@@ -106,6 +106,32 @@ src/
 
 ---
 
+## Local Testing Setup
+
+### Prerequisites (already done)
+- ✅ PHP 8.4.11 installed (`C:\tools\php84\php.exe`)
+- ✅ Composer 2.8.11 installed
+- ✅ `composer install` completed (52 packages in `app/vendor/`)
+
+### Remaining Steps
+1. **Install XAMPP** from [apachefriends.org](https://www.apachefriends.org/) (Windows 8.2.12)
+2. Open **XAMPP Control Panel** → Start **MySQL** only (Apache not needed)
+3. Click **Admin** next to MySQL → opens **phpMyAdmin** at `http://localhost/phpmyadmin`
+4. Create a new database: `licenseradar` (utf8mb4_unicode_ci collation)
+5. Start PHP's built-in dev server:
+   ```powershell
+   php -S localhost:8080 -t "c:\Users\user\Documents\GitHub\licenseradar\app\public"
+   ```
+6. Open browser → `http://localhost:8080/setup.php`
+7. Walk through the 5-step wizard:
+   - **Step 1:** Requirements check (should all pass)
+   - **Step 2:** Database → host: `localhost`, port: `3306`, name: `licenseradar`, user: `root`, pass: *(empty)*
+   - **Step 3:** Azure credentials (tenant ID, client ID, client secret from Azure Portal)
+   - **Step 4:** Admin account (username, email, password — min 12 chars)
+   - **Step 5:** Done → redirects to login
+
+---
+
 ## Standards & Compliance
 - **WCAG 2.2 AA** — Focus appearance, target size, accessible auth, reduced motion
 - **SEO** — Title tags, meta descriptions, JSON-LD, heading hierarchy, semantic HTML
