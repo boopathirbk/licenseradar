@@ -64,7 +64,7 @@ $appName    = LicenseRadar\Config::get('APP_NAME', 'LicenseRadar');
                 <!-- Theme Toggle -->
                 <form method="POST" action="?route=settings" style="display:inline">
                     <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="toggle_theme">
+                    <input type="hidden" name="action" value="update_theme">
                     <input type="hidden" name="theme" value="<?= $isDark ? 'light' : 'dark' ?>">
                     <button type="submit" class="icon-btn theme-toggle" aria-label="Switch to <?= $isDark ? 'light' : 'dark' ?> mode" title="Switch to <?= $isDark ? 'light' : 'dark' ?> mode">
                         <?php if ($isDark): ?>
