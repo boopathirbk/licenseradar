@@ -1,13 +1,13 @@
 # LicenseRadar — Development Guide
 
-> **Last updated:** 13 March 2026 · **Status:** Showcase site live, PHP app built (pending testing)
+> **Last updated:** 14 March 2026 · **Status:** Showcase site live, PHP app built & audited (2026 standards compliant)
 
 ## Project Overview
 
 LicenseRadar is a **free, open-source, self-hosted** Microsoft 365 license audit tool. It has two deliverables:
 
 1. **Showcase Site** (React) — ✅ **LIVE** at [boopathirbk.github.io/licenseradar](https://boopathirbk.github.io/licenseradar/)
-2. **PHP Application** (self-hosted audit tool) — 🟡 **BUILT** (needs `composer install` + hosting setup)
+2. **PHP Application** (self-hosted audit tool) — ✅ **BUILT & AUDITED** (2026 standards compliant)
 
 ---
 
@@ -57,7 +57,7 @@ src/
 
 ---
 
-## PHP Application — BUILT
+## PHP Application — BUILT & AUDITED
 
 ### Tech Stack
 - **PHP 8.2+** (targeting shared hosting: Hostinger, cPanel, GoDaddy)
@@ -83,8 +83,15 @@ src/
 5. **Cost Calculator** — USD + INR pricing, pre-loaded SKU prices
 6. **Dashboard** — Summary tiles, doughnut chart (Chart.js 4.5), detail tables
 7. **Reports** — One-click PDF and multi-sheet Excel export
-8. **Settings** — Theme toggle, 2FA management, session policy
-9. **Security** — PDO prepared statements, Argon2id passwords, CSRF tokens, CSP headers, .htaccess protection
+8. **Settings** — Theme toggle (inline, no reload), 2FA management, session policy
+9. **Security** — PDO prepared statements, Argon2id passwords, CSRF tokens (`hash_equals` timing-safe), CSP headers, SRI on CDN scripts, `.htaccess` protection
+10. **2026 Audit Compliance:**
+    - **PHP 8.4** — `strict_types`, no deprecated functions, typed returns
+    - **WCAG 2.2 AA** — `:focus-visible` indicators, `prefers-reduced-motion`, target size ≥24px, `autocomplete` on identity fields, skip link, ARIA landmarks
+    - **SRI** — Chart.js and qrcode-generator CDN scripts verified with `sha384` integrity hashes
+    - **CSP** — `script-src 'self' cdn.jsdelivr.net`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS
+    - **CSRF** — `_csrf_token` field with `hash_equals()` timing-safe comparison on all POST forms
+    - **Session** — `HttpOnly`, `SameSite=Strict`, `Secure`, `use_strict_mode`, `use_only_cookies`, idle + absolute timeouts
 
 ### Graph API Permissions (Application, read-only)
 - `User.Read.All` — user profiles + signInActivity
@@ -132,11 +139,38 @@ src/
 
 ---
 
-## Standards & Compliance
-- **WCAG 2.2 AA** — Focus appearance, target size, accessible auth, reduced motion
-- **SEO** — Title tags, meta descriptions, JSON-LD, heading hierarchy, semantic HTML
-- **Security** — CSP, HSTS, X-Frame-Options, SameSite cookies, rate limiting
-- **Accessibility** — Skip links, ARIA landmarks, focus-visible, screen reader friendly
+## Standards & Compliance (2026 Audit)
+
+### PHP 8.4
+- `declare(strict_types=1)` on all PHP files
+- `PASSWORD_ARGON2ID` for hashing (not deprecated bcrypt)
+- `random_bytes()` / `random_int()` for crypto
+- No `strtok()`, `md5()`, `sha1()` standalone (deprecated in 8.4)
+- Typed properties and return types throughout
+
+### WCAG 2.2 AA
+- **2.4.7 Focus Visible** — `:focus-visible` outline (2px solid #38bdf8)
+- **2.5.8 Target Size** — All buttons ≥ 24×24px minimum
+- **2.3.3 Reduced Motion** — `@media (prefers-reduced-motion: reduce)`
+- **1.3.5 Input Purpose** — `autocomplete` attributes on all identity fields
+- **2.4.1 Bypass Blocks** — Skip-to-main link
+- **4.1.2 Name/Role/Value** — `aria-label`, `aria-pressed`, `role` on controls
+
+### Security (OWASP 2026)
+- **SRI** — `integrity="sha384-..."` + `crossorigin="anonymous"` on Chart.js and qrcode-generator
+- **CSP** — `Content-Security-Policy` with `script-src`, `style-src`, `font-src`, `img-src`, `connect-src`
+- **CSRF** — `hash_equals()` timing-safe comparison, `_csrf_token` on all forms + fetch
+- **XSS** — `htmlspecialchars(ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8')` via `e()` helper
+- **SQLi** — Parameterized PDO queries, no string concatenation
+- **Session** — `HttpOnly`, `SameSite=Strict`, `Secure`, `use_strict_mode`
+- **Headers** — `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, HSTS
+- **Rate Limiting** — IP-based with configurable window/attempts via `login_attempts` table
+
+### CSS Architecture
+- Semantic text classes: `text-heading`, `text-body`, `text-muted`, `text-label`, `text-dimmed`
+- `html.light` overrides for all classes (no inline PHP ternaries)
+- `border-color-muted`, `--progress-inactive` CSS variable for light mode
+- Zero inline PHP color styles in templates
 
 ---
 

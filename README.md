@@ -3,7 +3,7 @@
 **Find and eliminate wasted Microsoft 365 licenses. Free, open-source, self-hosted.**
 
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
-![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B_%7C_8.4-777BB4.svg?logo=php&logoColor=white)
 ![Microsoft 365](https://img.shields.io/badge/Microsoft_365-Graph_API-0078D4.svg?logo=microsoft&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-In_Development-f59e0b.svg)
 ![WCAG](https://img.shields.io/badge/WCAG-2.2_AA-2E7D32.svg)
@@ -23,11 +23,13 @@ Star the repo to follow progress and get notified on release.
 | Milestone | Status |
 |---|---|
 | Project architecture & design | ✅ Complete |
-| GitHub Pages showcase site | 🔄 In progress |
-| PHP app — install wizard | 🔄 In progress |
-| PHP app — Graph API integration | 🔄 In progress |
-| PHP app — 2FA (Email OTP + TOTP + Passkey) | 🔄 In progress |
-| PHP app — Dashboard & reports | 🔜 Coming soon |
+| GitHub Pages showcase site | ✅ Complete |
+| PHP app — install wizard | ✅ Complete |
+| PHP app — Graph API integration | ✅ Complete |
+| PHP app — 2FA (Email OTP + TOTP) | ✅ Complete |
+| PHP app — Dashboard & reports | ✅ Complete |
+| PHP app — 2FA (Passkey / WebAuthn) | 🔄 In progress |
+| 2026 standards audit (WCAG 2.2, SRI, CSP) | ✅ Complete |
 | v1.0 public release | 🔜 Coming soon |
 
 ---
@@ -55,6 +57,8 @@ LicenseRadar scans your Microsoft 365 tenant and finds:
 - **WCAG 2.2 AA** — fully accessible, keyboard navigable, screen reader friendly
 - **PDF & Excel export** — one-click savings report for management
 - **100% free** — no subscription, no account, no tracking
+- **SRI protected** — CDN scripts verified via Subresource Integrity hashes
+- **CSP hardened** — Content Security Policy, HSTS, rate limiting, Argon2id passwords
 
 ---
 
@@ -89,15 +93,17 @@ LicenseRadar **never writes** to your tenant. Three read-only application permis
 
 **v1.0 — Launch**
 - [x] Project architecture & documentation
-- [ ] Install wizard (WordPress-style)
-- [ ] Graph API integration
-- [ ] Inactive / blocked / unassigned / redundant detection
-- [ ] Cost calculator (USD + INR)
-- [ ] PDF & Excel export
-- [ ] Email OTP 2FA
-- [ ] TOTP authenticator 2FA
-- [ ] Passkey / WebAuthn
-- [ ] GitHub Pages showcase site
+- [x] Install wizard (WordPress-style, 5-step)
+- [x] Graph API integration (client credentials grant)
+- [x] Inactive / blocked / unassigned / redundant detection
+- [x] Cost calculator (USD + INR)
+- [x] PDF & Excel export
+- [x] Email OTP 2FA
+- [x] TOTP authenticator 2FA (QR code setup)
+- [x] GitHub Pages showcase site
+- [x] 2026 standards audit (WCAG 2.2, SRI, CSP, PHP 8.4)
+- [ ] Passkey / WebAuthn 2FA
+- [ ] End-to-end deployment testing
 
 **v1.1 — Notifications**
 - [ ] Scheduled weekly email digest
