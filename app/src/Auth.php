@@ -232,7 +232,7 @@ final class Auth
     private function verifyTOTP(int $userId, string $code): bool
     {
         $record = Database::fetchOne(
-            'SELECT secret FROM two_factor_totp WHERE user_id = ? AND enabled = 1',
+            'SELECT secret, last_used_code FROM two_factor_totp WHERE user_id = ? AND enabled = 1',
             [$userId]
         );
 
