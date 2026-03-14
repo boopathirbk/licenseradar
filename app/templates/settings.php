@@ -48,18 +48,33 @@ ob_start();
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="update_password">
 
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label for="current_password" class="block text-xs font-medium <?= $isDark ? 'text-zinc-400' : 'text-zinc-600' ?>">Current Password</label>
-                <input type="password" id="current_password" name="current_password" required autocomplete="current-password" class="input-field">
+                <div class="input-password-wrap">
+                    <input type="password" id="current_password" name="current_password" required autocomplete="current-password" class="input-field">
+                    <button type="button" class="eye-toggle" aria-label="Show password" data-target="current_password">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label for="new_password" class="block text-xs font-medium <?= $isDark ? 'text-zinc-400' : 'text-zinc-600' ?>">New Password</label>
-                <input type="password" id="new_password" name="new_password" required minlength="12" autocomplete="new-password" class="input-field">
+                <div class="input-password-wrap">
+                    <input type="password" id="new_password" name="new_password" required minlength="12" autocomplete="new-password" class="input-field">
+                    <button type="button" class="eye-toggle" aria-label="Show password" data-target="new_password">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
                 <p class="text-xs <?= $isDark ? 'text-zinc-600' : 'text-zinc-400' ?>">Minimum 12 characters</p>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label for="confirm_password" class="block text-xs font-medium <?= $isDark ? 'text-zinc-400' : 'text-zinc-600' ?>">Confirm New Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" required minlength="12" autocomplete="new-password" class="input-field">
+                <div class="input-password-wrap">
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="12" autocomplete="new-password" class="input-field">
+                    <button type="button" class="eye-toggle" aria-label="Show password" data-target="confirm_password">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
 
             <button type="submit" class="btn-primary">Update Password</button>

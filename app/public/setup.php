@@ -165,14 +165,14 @@ function handleStep4(): void {
     redirect('setup.php?step=5');
 }
 
-// Check PHP extensions
+// Check PHP extensions — use function_exists as fallback for mbstring
 $requirements = [
     ['PHP >= 8.2',    version_compare(PHP_VERSION, '8.2.0', '>=')],
     ['PDO MySQL',     extension_loaded('pdo_mysql')],
     ['cURL',          extension_loaded('curl')],
-    ['mbstring',      extension_loaded('mbstring')],
+    ['mbstring',      extension_loaded('mbstring') || function_exists('mb_detect_encoding')],
     ['OpenSSL',       extension_loaded('openssl')],
-    ['JSON',          extension_loaded('json')],
+    ['JSON',          extension_loaded('json') || function_exists('json_encode')],
     ['GD or Imagick', extension_loaded('gd') || extension_loaded('imagick')],
 ];
 $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true);
@@ -187,13 +187,13 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="assets/css/app.css">
 </head>
-<body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen flex items-center justify-center px-4 py-8">
+<body class="min-h-screen flex items-center justify-center px-4 py-8">
 
 <div class="w-full max-w-lg space-y-8">
 
     <!-- Logo -->
     <div class="text-center space-y-3">
-        <div class="mx-auto w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+        <div class="mx-auto flex items-center justify-center" style="width:48px;height:48px;border-radius:12px;background:#18181b;border:1px solid #27272a">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
                 <circle cx="16" cy="16" r="14" stroke="url(#gs)" stroke-width="2.5" fill="none"/>
                 <circle cx="16" cy="16" r="8" stroke="url(#gs)" stroke-width="2" fill="none" opacity=".5"/>
@@ -207,7 +207,7 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <!-- Progress bar -->
     <div class="flex items-center gap-1">
         <?php for ($i = 1; $i <= 5; $i++): ?>
-        <div class="flex-1 h-1.5 rounded-full <?= $i <= $step ? 'bg-sky-500' : 'bg-zinc-800' ?> transition-colors"></div>
+        <div class="flex-1 rounded-full transition-colors" style="height:6px;background:<?= $i <= $step ? '#0ea5e9' : '#27272a' ?>"></div>
         <?php endfor; ?>
     </div>
     <p class="text-center text-xs text-zinc-500">Step <?= $step ?> of 5</p>
@@ -316,14 +316,24 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
                 <label class="block text-xs font-medium text-zinc-400">Email</label>
                 <input type="email" name="email" class="input-field" required>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label class="block text-xs font-medium text-zinc-400">Password</label>
-                <input type="password" name="password" class="input-field" minlength="12" required>
+                <div class="input-password-wrap">
+                    <input type="password" id="setup_password" name="password" class="input-field" minlength="12" required>
+                    <button type="button" class="eye-toggle" aria-label="Show password" onclick="togglePw(this,'setup_password')">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
                 <p class="text-xs text-zinc-600">Minimum 12 characters</p>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label class="block text-xs font-medium text-zinc-400">Confirm Password</label>
-                <input type="password" name="confirm_password" class="input-field" minlength="12" required>
+                <div class="input-password-wrap">
+                    <input type="password" id="setup_confirm" name="confirm_password" class="input-field" minlength="12" required>
+                    <button type="button" class="eye-toggle" aria-label="Show password" onclick="togglePw(this,'setup_confirm')">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn-primary w-full">Create & Install</button>
         </form>
@@ -332,8 +342,8 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <?php elseif ($step === 5): ?>
     <!-- Step 5: Complete -->
     <div class="card text-center space-y-6 py-8">
-        <div class="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-            <svg class="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        <div class="mx-auto flex items-center justify-center" style="width:64px;height:64px;border-radius:1rem;background:rgba(16,185,129,0.1)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:32px;height:32px"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
         </div>
         <div>
             <h2 class="text-xl font-bold text-white">Setup Complete!</h2>
@@ -345,5 +355,16 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
 
 </div>
 
+<script>
+function togglePw(btn, id) {
+    var inp = document.getElementById(id);
+    if (!inp) return;
+    var isPw = inp.type === 'password';
+    inp.type = isPw ? 'text' : 'password';
+    btn.innerHTML = isPw
+        ? '<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+        : '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+</script>
 </body>
 </html>

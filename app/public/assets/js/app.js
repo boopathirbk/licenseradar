@@ -1,92 +1,62 @@
 /**
  * LicenseRadar — Client-Side JavaScript
- * Theme toggle, 2FA tab switching, and utility functions.
+ * Password eye toggle, TOTP setup, and utility functions.
  */
 
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
-    initThemeToggle();
+    initPasswordToggles();
     init2FATabs();
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// Theme Toggle
-// ═══════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
+// Password Eye Toggle
+// ════════════════════════════════════════════════════════════════════════
 
-function initThemeToggle() {
-    const btn = document.getElementById('theme-toggle');
-    if (!btn) return;
+function initPasswordToggles() {
+    document.querySelectorAll('.eye-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (!input) return;
 
-    btn.addEventListener('click', () => {
-        const html = document.documentElement;
-        const current = html.classList.contains('dark') ? 'dark' : 'light';
-        const next = current === 'dark' ? 'light' : 'dark';
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
 
-        html.classList.remove(current);
-        html.classList.add(next);
-
-        // Persist via form submission to update DB
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '?route=settings';
-        form.style.display = 'none';
-
-        const csrf = document.querySelector('input[name="_csrf_token"]');
-        if (csrf) {
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = '_csrf_token';
-            csrfInput.value = csrf.value;
-            form.appendChild(csrfInput);
-        }
-
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = 'update_theme';
-        form.appendChild(actionInput);
-
-        const themeInput = document.createElement('input');
-        themeInput.type = 'hidden';
-        themeInput.name = 'theme';
-        themeInput.value = next;
-        form.appendChild(themeInput);
-
-        document.body.appendChild(form);
-        form.submit();
+            // Swap SVG icon: eye-open ↔ eye-off
+            if (isPassword) {
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+                btn.setAttribute('aria-label', 'Hide password');
+            } else {
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+                btn.setAttribute('aria-label', 'Show password');
+            }
+        });
     });
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// 2FA Method Tabs
-// ═══════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
+// 2FA Tab Switching (for 2FA verification page)
+// ════════════════════════════════════════════════════════════════════════
 
 function init2FATabs() {
-    const tabs = document.querySelectorAll('.method-tab');
-    const methodInput = document.getElementById('2fa-method');
-    if (!tabs.length || !methodInput) return;
+    const tabs = document.querySelectorAll('[data-2fa-tab]');
+    if (!tabs.length) return;
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            const method = tab.dataset.method;
-            methodInput.value = method;
+            const method = tab.getAttribute('data-2fa-tab');
 
-            // Update active state
+            // Update active tab
             tabs.forEach(t => {
-                t.setAttribute('aria-selected', 'false');
-                t.style.background = 'transparent';
-                t.style.color = '';
+                t.classList.toggle('nav-active', t === tab);
+                t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
             });
-            tab.setAttribute('aria-selected', 'true');
-            tab.style.background = 'var(--tab-active-bg, rgba(63, 63, 70, 0.4))';
-            tab.style.color = 'var(--tab-active-color, #f4f4f5)';
-        });
 
-        // Set initial active state
-        if (tab.getAttribute('aria-selected') === 'true') {
-            tab.style.background = 'var(--tab-active-bg, rgba(63, 63, 70, 0.4))';
-            tab.style.color = 'var(--tab-active-color, #f4f4f5)';
-        }
+            // Update hidden input
+            const methodInput = document.getElementById('2fa_method');
+            if (methodInput) methodInput.value = method;
+        });
     });
 }
