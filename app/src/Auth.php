@@ -28,8 +28,6 @@ final class Auth
             return $fail;
         }
 
-        $this->recordAttempt();
-
         if ($username === '' || $password === '') {
             $fail['error'] = 'Username and password are required.';
             return $fail;
@@ -204,22 +202,15 @@ final class Auth
 
     private function verifyEmailOTP(int $userId, string $code): bool
     {
-        $record = Database::fetchOne(
-            'SELECT code, expires FROM two_factor_email WHERE user_id = ? AND enabled = 1',
-            [$userId]
+        // Atomic: clear the OTP and check if the row was updated.
+        // This prevents TOCTOU race — two concurrent requests can't both succeed
+        // because the first UPDATE clears the code, so the second finds no match.
+        $stmt = Database::query(
+            'UPDATE two_factor_email SET code = NULL, expires = NULL WHERE user_id = ? AND enabled = 1 AND code = ? AND expires > NOW()',
+            [$userId, $code]
         );
 
-        if (!$record || !hash_equals($record['code'] ?? '', $code)) {
-            return false;
-        }
-
-        if (strtotime($record['expires']) < time()) {
-            return false; // Expired
-        }
-
-        // Clear the OTP after use
-        Database::query('UPDATE two_factor_email SET code = NULL, expires = NULL WHERE user_id = ?', [$userId]);
-        return true;
+        return $stmt->rowCount() > 0;
     }
 
     private function otpEmailTemplate(string $code): string
@@ -250,7 +241,23 @@ final class Auth
         }
 
         $otp = TOTP::createFromSecret($record['secret']);
-        return $otp->verify($code, null, 1); // 1 window tolerance (30 seconds)
+        if (!$otp->verify($code, null, 1)) {
+            return false;
+        }
+
+        // Prevent TOTP replay — reject if same code was already used
+        $lastUsed = $record['last_used_code'] ?? '';
+        if ($lastUsed !== '' && hash_equals($lastUsed, $code)) {
+            return false;
+        }
+
+        // Store used code to prevent replay within the same time window
+        Database::query(
+            'UPDATE two_factor_totp SET last_used_code = ? WHERE user_id = ? AND enabled = 1',
+            [$code, $userId]
+        );
+
+        return true;
     }
 
     // ── Rate Limiting ────────────────────────────────────────────────
@@ -261,20 +268,19 @@ final class Auth
         $window = Config::getInt('RATE_LIMIT_WINDOW', 900);
         $max    = Config::getInt('RATE_LIMIT_ATTEMPTS', 5);
 
+        // Record attempt FIRST, then check — prevents race condition where
+        // concurrent requests all pass the check before any are recorded.
+        Database::query(
+            'INSERT INTO login_attempts (ip_address) VALUES (?)',
+            [$ip]
+        );
+
         $since = date('Y-m-d H:i:s', time() - $window);
         $row = Database::fetchOne(
             'SELECT COUNT(*) as cnt FROM login_attempts WHERE ip_address = ? AND attempted_at > ?',
             [$ip, $since]
         );
 
-        return $row && (int) $row['cnt'] >= $max;
-    }
-
-    private function recordAttempt(): void
-    {
-        Database::query(
-            'INSERT INTO login_attempts (ip_address) VALUES (?)',
-            [$_SERVER['REMOTE_ADDR'] ?? '']
-        );
+        return $row && (int) $row['cnt'] > $max; // > instead of >= because current attempt is already counted
     }
 }

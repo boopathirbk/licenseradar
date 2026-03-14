@@ -42,10 +42,11 @@ CREATE TABLE IF NOT EXISTS `two_factor_email` (
 
 -- ── 2FA: TOTP ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `two_factor_totp` (
-    `id`      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT UNSIGNED NOT NULL UNIQUE,
-    `secret`  VARCHAR(64)  NOT NULL,
-    `enabled` TINYINT(1)   NOT NULL DEFAULT 0,
+    `id`              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id`         INT UNSIGNED NOT NULL UNIQUE,
+    `secret`          VARCHAR(64)  NOT NULL,
+    `enabled`         TINYINT(1)   NOT NULL DEFAULT 0,
+    `last_used_code`  VARCHAR(6)   DEFAULT NULL COMMENT 'Prevents TOTP replay within same time window',
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
