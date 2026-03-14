@@ -30,6 +30,8 @@ Star the repo to follow progress and get notified on release.
 | PHP app — Dashboard & reports | ✅ Complete |
 | PHP app — 2FA (Passkey / WebAuthn) | ✅ Complete |
 | 2026 standards audit (WCAG 2.2, SRI, CSP) | ✅ Complete |
+| Security hardening audit (OWASP, info leak, CSRF) | ✅ Complete |
+| Race condition fixes (OTP replay, rate limit, TOTP) | ✅ Complete |
 | v1.0 public release | 🔜 Coming soon |
 
 ---
@@ -59,6 +61,7 @@ LicenseRadar scans your Microsoft 365 tenant and finds:
 - **100% free** — no subscription, no account, no tracking
 - **SRI protected** — CDN scripts verified via Subresource Integrity hashes
 - **CSP hardened** — Content Security Policy, HSTS, rate limiting, Argon2id passwords
+- **Race-condition proof** — Atomic OTP verification, TOTP replay prevention, insert-before-check rate limiting
 
 ---
 
@@ -103,6 +106,8 @@ LicenseRadar **never writes** to your tenant. Three read-only application permis
 - [x] GitHub Pages showcase site
 - [x] 2026 standards audit (WCAG 2.2, SRI, CSP, PHP 8.4)
 - [x] Passkey / WebAuthn 2FA (registration, removal, browser compat check)
+- [x] Security hardening audit (OWASP info leak, CSRF on setup, open redirect)
+- [x] Race condition fixes (OTP replay, rate limit bypass, TOTP replay)
 - [ ] End-to-end deployment testing (requires HTTPS hosting)
 
 **v1.1 — Notifications**

@@ -1,6 +1,6 @@
 # LicenseRadar — Development Guide
 
-> **Last updated:** 14 March 2026 · **Status:** Showcase site live, PHP app built & audited (all 3 2FA methods + 2026 standards)
+> **Last updated:** 14 March 2026 · **Status:** Showcase site live, PHP app built & audited (security hardened, race conditions fixed)
 
 ## Project Overview
 
@@ -85,9 +85,14 @@ src/
 6. **Dashboard** — Summary tiles, doughnut chart (Chart.js 4.5), detail tables
 7. **Reports** — One-click PDF and multi-sheet Excel export
 8. **Settings** — Theme toggle (inline, no reload), 2FA management (enable/disable all 3 methods), passkey registration + removal, session policy
-9. **Security** — PDO prepared statements, Argon2id passwords, CSRF tokens (`hash_equals` timing-safe), CSP headers, SRI on CDN scripts, `.htaccess` protection
-10. **Setup Wizard Security** — Standalone security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy) on setup.php
-11. **2026 Audit Compliance:**
+9. **Security** — PDO prepared statements, Argon2id passwords, CSRF tokens (`hash_equals` timing-safe), CSP headers, SRI on CDN scripts
+10. **Setup Wizard Security** — CSRF verification on all POST forms, standalone security headers, hardened session (HttpOnly, SameSite, strict_mode), no error message leaks
+11. **Race Condition Hardening:**
+    - **OTP Replay Prevention** — Atomic `UPDATE … WHERE code = ? AND expires > NOW()` with `rowCount()` check (not SELECT→compare→UPDATE)
+    - **Rate Limit Bypass Prevention** — INSERT attempt before count check (not check-then-insert)
+    - **TOTP Replay Prevention** — `last_used_code` column prevents same code reuse within 30s window
+    - **Info Disclosure Prevention** — No exception messages leaked to client (generic errors only)
+12. **2026 Audit Compliance:**
     - **PHP 8.4** — `strict_types`, no deprecated functions, typed returns
     - **WCAG 2.2 AA** — `:focus-visible` indicators, `prefers-reduced-motion`, target size ≥24px, `autocomplete` on identity fields, skip link, ARIA landmarks
     - **SRI** — Chart.js and qrcode-generator CDN scripts verified with `sha384` integrity hashes
@@ -166,7 +171,12 @@ src/
 - **SQLi** — Parameterized PDO queries, no string concatenation
 - **Session** — `HttpOnly`, `SameSite=Strict`, `Secure`, `use_strict_mode`
 - **Headers** — `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, HSTS
-- **Rate Limiting** — IP-based with configurable window/attempts via `login_attempts` table
+- **Rate Limiting** — Insert-before-check pattern (race-condition proof), IP-based, configurable window/attempts
+- **OTP Replay** — Atomic UPDATE with `rowCount()` — concurrent requests can't both succeed
+- **TOTP Replay** — `last_used_code` column rejects same code within 30s time window
+- **Open Redirect** — `HTTP_REFERER` validated against `base_url()` before redirect
+- **Info Disclosure** — Generic error messages only; exception details logged server-side, never sent to client
+- **Setup CSRF** — All 4 setup wizard forms have `csrf_field()` + server-side `csrf_verify()` on POST
 
 ### CSS Architecture
 - Semantic text classes: `text-heading`, `text-body`, `text-muted`, `text-label`, `text-dimmed`
