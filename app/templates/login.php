@@ -12,12 +12,12 @@ $pageTitle = 'Login';
 ob_start();
 ?>
 
-<div class="min-h-screen flex items-center justify-center px-4 <?= $isDark ? 'bg-zinc-950' : 'bg-zinc-50' ?>">
+<div class="min-h-screen flex items-center justify-center px-4">
     <div class="w-full max-w-sm space-y-8">
 
         <!-- Logo -->
         <div class="text-center space-y-3">
-            <div class="mx-auto w-12 h-12 rounded-xl <?= $isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-zinc-200 shadow-sm' ?> flex items-center justify-center">
+            <div class="mx-auto w-12 h-12 rounded-xl <?= $isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-zinc-200' ?> flex items-center justify-center" style="width:48px;height:48px">
                 <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
                     <circle cx="16" cy="16" r="14" stroke="url(#gl)" stroke-width="2.5" fill="none"/>
                     <circle cx="16" cy="16" r="8" stroke="url(#gl)" stroke-width="2" fill="none" opacity=".5"/>
@@ -27,7 +27,7 @@ ob_start();
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight <?= $isDark ? 'text-white' : 'text-zinc-900' ?>">Sign in to LicenseRadar</h1>
-                <p class="text-sm <?= $isDark ? 'text-zinc-500' : 'text-zinc-500' ?> mt-1">Enter your credentials to continue</p>
+                <p class="text-sm text-zinc-500 mt-1">Enter your credentials to continue</p>
             </div>
         </div>
 
@@ -35,7 +35,7 @@ ob_start();
         <form method="POST" action="?route=login" class="space-y-4">
             <?= csrf_field() ?>
 
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label for="username" class="block text-xs font-medium <?= $isDark ? 'text-zinc-400' : 'text-zinc-600' ?>">Username or Email</label>
                 <input
                     type="text"
@@ -49,17 +49,22 @@ ob_start();
                 >
             </div>
 
-            <div class="space-y-1.5">
+            <div class="space-y-1">
                 <label for="password" class="block text-xs font-medium <?= $isDark ? 'text-zinc-400' : 'text-zinc-600' ?>">Password</label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    autocomplete="current-password"
-                    class="input-field"
-                    placeholder="••••••••••••"
-                >
+                <div class="input-password-wrap">
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        autocomplete="current-password"
+                        class="input-field"
+                        placeholder="••••••••••••"
+                    >
+                    <button type="button" class="eye-toggle" aria-label="Show password" data-target="password">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
 
             <button type="submit" class="btn-primary w-full">

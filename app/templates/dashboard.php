@@ -232,11 +232,13 @@ ob_start();
     <?php else: ?>
     <!-- Empty State -->
     <div class="card text-center py-16 space-y-4">
-        <div class="mx-auto w-16 h-16 rounded-2xl <?= $isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-zinc-100 border border-zinc-200' ?> flex items-center justify-center">
-            <svg class="w-8 h-8 <?= $isDark ? 'text-zinc-600' : 'text-zinc-400' ?>" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <div class="mx-auto flex items-center justify-center" style="width:64px;height:64px;border-radius:1rem;background:<?= $isDark ? 'rgba(24,24,27,0.8)' : '#f4f4f5' ?>;border:1px solid <?= $isDark ? '#27272a' : '#e4e4e7' ?>">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="<?= $isDark ? '#52525b' : '#a1a1aa' ?>" stroke-width="1.5" style="width:32px;height:32px">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
         </div>
         <h2 class="text-lg font-semibold <?= $isDark ? 'text-white' : 'text-zinc-900' ?>">No Audit Data</h2>
-        <p class="text-sm <?= $isDark ? 'text-zinc-500' : 'text-zinc-500' ?> max-w-sm mx-auto">
+        <p class="text-sm text-zinc-500 max-w-sm mx-auto">
             Click <strong>Run Audit</strong> to scan your Microsoft 365 tenant for license waste.
         </p>
     </div>
