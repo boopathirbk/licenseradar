@@ -142,27 +142,32 @@ function handleStep4(): void {
     file_put_contents($envPath, $envContent);
 
     // Reload config and connect to DB
-    Config::load($envPath);
-    Database::reset();
+    try {
+        Config::reload($envPath);
+        Database::reset();
 
-    // Import schema
-    $schemaPath = dirname(__DIR__) . '/schema.sql';
-    if (!Database::importSchema($schemaPath)) {
-        flash('error', 'Failed to import database schema.');
+        // Import schema
+        $schemaPath = dirname(__DIR__) . '/schema.sql';
+        if (!Database::importSchema($schemaPath)) {
+            flash('error', 'Failed to import database schema.');
+            redirect('setup.php?step=4');
+        }
+
+        // Create admin user
+        $hash = password_hash($password, PASSWORD_ARGON2ID);
+        Database::query(
+            'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
+            [$username, $email, $hash, 'admin']
+        );
+
+        // Clean up session
+        unset($_SESSION['setup_db'], $_SESSION['setup_azure']);
+        $_SESSION['setup_step'] = 5;
+        redirect('setup.php?step=5');
+    } catch (\Throwable $e) {
+        flash('error', 'Installation failed: ' . $e->getMessage());
         redirect('setup.php?step=4');
     }
-
-    // Create admin user
-    $hash = password_hash($password, PASSWORD_ARGON2ID);
-    Database::query(
-        'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-        [$username, $email, $hash, 'admin']
-    );
-
-    // Clean up session
-    unset($_SESSION['setup_db'], $_SESSION['setup_azure']);
-    $_SESSION['setup_step'] = 5;
-    redirect('setup.php?step=5');
 }
 
 // Check PHP extensions — use function_exists as fallback for mbstring
@@ -183,31 +188,44 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Setup — LicenseRadar</title>
+    <meta name="description" content="LicenseRadar Setup Wizard — Configure your Microsoft 365 license audit tool">
+    <title>Setup Wizard — LicenseRadar</title>
     <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/app.js" defer></script>
 </head>
-<body class="min-h-screen flex items-center justify-center px-4 py-8">
+<body style="display:flex;align-items:center;justify-content:center;padding:2rem 1rem">
+
+<!-- Theme toggle (top-right corner) -->
+<button type="button"
+        class="icon-btn theme-toggle"
+        id="setup-theme-toggle"
+        aria-label="Switch to light mode"
+        title="Switch to light mode"
+        data-csrf="<?= e(\LicenseRadar\csrf_token()) ?>"
+        style="position:fixed;top:16px;right:16px;z-index:100">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+</button>
 
 <div class="w-full max-w-lg space-y-8">
 
     <!-- Logo -->
     <div class="text-center space-y-3">
-        <div class="mx-auto flex items-center justify-center" style="width:48px;height:48px;border-radius:12px;background:#18181b;border:1px solid #27272a">
-            <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+        <div class="mx-auto logo-box">
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
                 <circle cx="16" cy="16" r="14" stroke="url(#gs)" stroke-width="2.5" fill="none"/>
                 <circle cx="16" cy="16" r="8" stroke="url(#gs)" stroke-width="2" fill="none" opacity=".5"/>
                 <circle cx="16" cy="16" r="3" fill="#38bdf8"/>
                 <defs><linearGradient id="gs" x1="4" y1="4" x2="28" y2="28"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
             </svg>
         </div>
-        <h1 class="text-xl font-bold tracking-tight text-white">LicenseRadar Setup</h1>
+        <h1 class="setup-title">LicenseRadar Setup</h1>
     </div>
 
     <!-- Progress bar -->
     <div class="flex items-center gap-1">
         <?php for ($i = 1; $i <= 5; $i++): ?>
-        <div class="flex-1 rounded-full transition-colors" style="height:6px;background:<?= $i <= $step ? '#0ea5e9' : '#27272a' ?>"></div>
+        <div class="flex-1 rounded-full transition-colors" style="height:6px;background:<?= $i <= $step ? '#0ea5e9' : 'var(--progress-inactive, #27272a)' ?>"></div>
         <?php endfor; ?>
     </div>
     <p class="text-center text-xs text-zinc-500">Step <?= $step ?> of 5</p>
@@ -240,6 +258,7 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
         </div>
         <?php if ($allPassed): ?>
         <form method="POST">
+            <?= csrf_field() ?>
             <button type="submit" class="btn-primary w-full">Continue</button>
         </form>
         <?php else: ?>
@@ -254,24 +273,24 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
         <form method="POST" class="space-y-4">
             <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-zinc-400">Host</label>
+                    <label class="block text-xs font-medium text-label">Host</label>
                     <input type="text" name="db_host" value="localhost" class="input-field" required>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-medium text-zinc-400">Port</label>
+                    <label class="block text-xs font-medium text-label">Port</label>
                     <input type="text" name="db_port" value="3306" class="input-field" required>
                 </div>
             </div>
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Database Name</label>
+                <label class="block text-xs font-medium text-label">Database Name</label>
                 <input type="text" name="db_name" class="input-field" placeholder="licenseradar" required>
             </div>
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Username</label>
+                <label class="block text-xs font-medium text-label">Username</label>
                 <input type="text" name="db_user" class="input-field" placeholder="root" required>
             </div>
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Password</label>
+                <label class="block text-xs font-medium text-label">Password</label>
                 <input type="password" name="db_pass" class="input-field" placeholder="••••••">
             </div>
             <button type="submit" class="btn-primary w-full">Test & Continue</button>
@@ -288,15 +307,15 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
         </p>
         <form method="POST" class="space-y-4">
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Tenant ID</label>
+                <label class="block text-xs font-medium text-label">Tenant ID</label>
                 <input type="text" name="tenant_id" class="input-field font-mono text-xs" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
             </div>
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Client ID</label>
+                <label class="block text-xs font-medium text-label">Client ID</label>
                 <input type="text" name="client_id" class="input-field font-mono text-xs" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
             </div>
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Client Secret</label>
+                <label class="block text-xs font-medium text-label">Client Secret</label>
                 <input type="password" name="client_secret" class="input-field font-mono text-xs" required>
             </div>
             <button type="submit" class="btn-primary w-full">Continue</button>
@@ -309,17 +328,17 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
         <h2 class="card-title">Create Admin Account</h2>
         <form method="POST" class="space-y-4">
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Username</label>
-                <input type="text" name="username" class="input-field" placeholder="admin" required>
+                <label class="block text-xs font-medium text-label">Username</label>
+                <input type="text" name="username" class="input-field" placeholder="admin" required autocomplete="username">
             </div>
             <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-zinc-400">Email</label>
-                <input type="email" name="email" class="input-field" required>
+                <label class="block text-xs font-medium text-label">Email</label>
+                <input type="email" name="email" class="input-field" required autocomplete="email">
             </div>
             <div class="space-y-1">
-                <label class="block text-xs font-medium text-zinc-400">Password</label>
+                <label class="block text-xs font-medium text-label">Password</label>
                 <div class="input-password-wrap">
-                    <input type="password" id="setup_password" name="password" class="input-field" minlength="12" required>
+                    <input type="password" id="setup_password" name="password" class="input-field" minlength="12" required autocomplete="new-password">
                     <button type="button" class="eye-toggle" aria-label="Show password" onclick="togglePw(this,'setup_password')">
                         <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
@@ -329,7 +348,7 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
             <div class="space-y-1">
                 <label class="block text-xs font-medium text-zinc-400">Confirm Password</label>
                 <div class="input-password-wrap">
-                    <input type="password" id="setup_confirm" name="confirm_password" class="input-field" minlength="12" required>
+                    <input type="password" id="setup_confirm" name="confirm_password" class="input-field" minlength="12" required autocomplete="new-password">
                     <button type="button" class="eye-toggle" aria-label="Show password" onclick="togglePw(this,'setup_confirm')">
                         <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
@@ -342,12 +361,12 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <?php elseif ($step === 5): ?>
     <!-- Step 5: Complete -->
     <div class="card text-center space-y-6 py-8">
-        <div class="mx-auto flex items-center justify-center" style="width:64px;height:64px;border-radius:1rem;background:rgba(16,185,129,0.1)">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:32px;height:32px"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        <div class="mx-auto empty-state-icon" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
         </div>
         <div>
-            <h2 class="text-xl font-bold text-white">Setup Complete!</h2>
-            <p class="text-sm text-zinc-500 mt-2">LicenseRadar is ready. Sign in with your admin account.</p>
+            <h2 class="text-xl font-bold text-heading">Setup Complete!</h2>
+            <p class="text-sm text-muted mt-2">LicenseRadar is ready. Sign in with your admin account.</p>
         </div>
         <a href="index.php?route=login" class="btn-primary inline-flex px-8">Go to Login</a>
     </div>

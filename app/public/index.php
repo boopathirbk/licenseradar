@@ -40,6 +40,7 @@ if ($route !== 'login' && $route !== '2fa') {
         'export/pdf'    => handleExportPDF(),
         'export/excel'  => handleExportExcel(),
         'settings'      => handleSettings($method),
+        'toggle_theme'  => handleToggleTheme(),
         'logout'        => handleLogout(),
         default         => handleDashboard(),
     };
@@ -127,18 +128,25 @@ function handleDashboard(): never
 
 function handleAudit(): never
 {
-    if (!csrf_verify() && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_verify()) {
         flash('error', 'Invalid security token.');
         redirect('?route=dashboard');
     }
 
-    $engine = new \LicenseRadar\AuditEngine();
-    $results = $engine->runAudit();
-    $_SESSION['audit_results'] = $results;
-    $_SESSION['audit_timestamp'] = date('Y-m-d H:i:s');
-    \LicenseRadar\audit_log('audit_run', 'Audit completed');
+    try {
+        $engine = new \LicenseRadar\AuditEngine();
+        $results = $engine->runAudit();
+        $_SESSION['audit_results'] = $results;
+        $_SESSION['audit_timestamp'] = date('Y-m-d H:i:s');
+        \LicenseRadar\audit_log('audit_run', 'Audit completed');
+        flash('success', 'Audit completed successfully.');
+    } catch (\Throwable $e) {
+        $msg = Config::get('APP_DEBUG', 'false') === 'true'
+            ? 'Audit failed: ' . $e->getMessage()
+            : 'Audit failed. Please verify your Azure credentials in Settings.';
+        flash('error', $msg);
+    }
 
-    flash('success', 'Audit completed successfully.');
     redirect('?route=dashboard');
 }
 
@@ -174,11 +182,13 @@ function handleSettings(string $method): never
         $action = $_POST['action'] ?? '';
 
         match ($action) {
-            'update_theme'    => updateTheme(),
-            'update_password' => updatePassword(),
-            'enable_email_2fa'=> enableEmail2FA(),
-            'enable_totp'     => enableTOTP(),
-            default           => null,
+            'update_theme'      => updateTheme(),
+            'update_password'   => updatePassword(),
+            'enable_email_2fa'  => enableEmail2FA(),
+            'disable_email_2fa' => disableEmail2FA(),
+            'enable_totp'       => enableTOTP(),
+            'disable_totp'      => disableTOTP(),
+            default             => null,
         };
     }
 
@@ -201,7 +211,35 @@ function updateTheme(): void
     $theme = in_array($_POST['theme'] ?? '', ['dark', 'light'], true) ? $_POST['theme'] : 'dark';
     \LicenseRadar\Database::query('UPDATE users SET theme = ? WHERE id = ?', [$theme, $_SESSION['user_id']]);
     $_SESSION['theme'] = $theme;
-    flash('success', 'Theme updated.');
+    // No flash — the toggle is instant
+}
+
+/**
+ * AJAX theme toggle — returns JSON so the page doesn't reload.
+ * Also handles form POST fallback by redirecting back to the referer.
+ */
+function handleToggleTheme(): never
+{
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && csrf_verify()) {
+        $theme = in_array($_POST['theme'] ?? '', ['dark', 'light'], true) ? $_POST['theme'] : 'dark';
+        if (!empty($_SESSION['user_id'])) {
+            \LicenseRadar\Database::query('UPDATE users SET theme = ? WHERE id = ?', [$theme, $_SESSION['user_id']]);
+        }
+        $_SESSION['theme'] = $theme;
+
+        // If AJAX (fetch), return JSON
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => true, 'theme' => $theme]);
+            exit;
+        }
+
+        // Form fallback — redirect back to where the user was
+        $referer = $_SERVER['HTTP_REFERER'] ?? '?route=dashboard';
+        redirect($referer);
+    }
+
+    redirect('?route=dashboard');
 }
 
 function updatePassword(): void
@@ -271,4 +309,20 @@ function enableTOTP(): void
     }
     \LicenseRadar\audit_log('2fa_totp_enabled', 'TOTP authenticator enabled');
     flash('success', 'TOTP authenticator enabled.');
+}
+
+function disableEmail2FA(): void
+{
+    $userId = (int) $_SESSION['user_id'];
+    \LicenseRadar\Database::query('UPDATE two_factor_email SET enabled = 0 WHERE user_id = ?', [$userId]);
+    \LicenseRadar\audit_log('2fa_email_disabled', 'Email OTP disabled');
+    flash('success', 'Email OTP has been disabled.');
+}
+
+function disableTOTP(): void
+{
+    $userId = (int) $_SESSION['user_id'];
+    \LicenseRadar\Database::query('UPDATE two_factor_totp SET enabled = 0 WHERE user_id = ?', [$userId]);
+    \LicenseRadar\audit_log('2fa_totp_disabled', 'TOTP authenticator disabled');
+    flash('success', 'Authenticator app has been disabled.');
 }

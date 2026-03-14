@@ -62,6 +62,16 @@ final class Config
     }
 
     /**
+     * Force reload .env (used by setup wizard after writing new .env).
+     */
+    public static function reload(string $envPath): void
+    {
+        self::$loaded = false;
+        self::$values = [];
+        self::load($envPath);
+    }
+
+    /**
      * Get a configuration value.
      */
     public static function get(string $key, string $default = ''): string
