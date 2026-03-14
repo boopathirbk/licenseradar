@@ -10,7 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/bootstrap.php';
 
 use LicenseRadar\Config;
-use function LicenseRadar\{is_authenticated, require_auth, redirect, current_route, csrf_verify, flash};
+use function LicenseRadar\{is_authenticated, require_auth, redirect, current_route, csrf_verify, flash, base_url};
 
 // ── Redirect to setup if not installed ───────────────────────────────
 if (!Config::isInstalled()) {
@@ -239,9 +239,11 @@ function handleToggleTheme(): never
             exit;
         }
 
-        // Form fallback — redirect back to where the user was
-        $referer = $_SERVER['HTTP_REFERER'] ?? '?route=dashboard';
-        redirect($referer);
+        // Form fallback — redirect back (only allow relative URLs to prevent open redirect)
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $safe = (str_contains($referer, '?route=') && !str_starts_with($referer, 'http://') && !str_starts_with($referer, 'https://'))
+            || str_starts_with($referer, base_url());
+        redirect($safe ? $referer : '?route=dashboard');
     }
 
     redirect('?route=dashboard');

@@ -14,6 +14,10 @@ use function LicenseRadar\{e, csrf_field, csrf_verify, flash, get_flashes, redir
 
 // Don't start full session with security headers for setup — simpler session
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Strict');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
     session_name('LR_SETUP');
     session_start();
 }
@@ -43,6 +47,10 @@ $flashes = get_flashes();
 
 // Handle POST submissions
 if ($method === 'POST') {
+    if (!csrf_verify()) {
+        flash('error', 'Invalid security token. Please try again.');
+        redirect('setup.php?step=' . $step);
+    }
     match ($step) {
         1 => handleStep1(),
         2 => handleStep2(),
@@ -71,7 +79,7 @@ function handleStep2(): void {
 
     $test = Database::testConnection($host, $port, $name, $user, $pass);
     if (!$test['success']) {
-        flash('error', 'Connection failed: ' . $test['error']);
+        flash('error', 'Database connection failed. Please check your credentials.');
         redirect('setup.php?step=2');
     }
 
@@ -176,7 +184,7 @@ function handleStep4(): void {
         $_SESSION['setup_step'] = 5;
         redirect('setup.php?step=5');
     } catch (\Throwable $e) {
-        flash('error', 'Installation failed: ' . $e->getMessage());
+        flash('error', 'Installation failed. Please verify your configuration and try again.');
         redirect('setup.php?step=4');
     }
 }
@@ -282,6 +290,7 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <div class="card space-y-4">
         <h2 class="card-title">Database Configuration</h2>
         <form method="POST" class="space-y-4">
+            <?= csrf_field() ?>
             <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
                     <label class="block text-xs font-medium text-label">Host</label>
@@ -317,6 +326,7 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
             with API permissions: <code class="text-sky-400">User.Read.All</code>, <code class="text-sky-400">Directory.Read.All</code>, <code class="text-sky-400">Organization.Read.All</code> (Application type).
         </p>
         <form method="POST" class="space-y-4">
+            <?= csrf_field() ?>
             <div class="space-y-1.5">
                 <label class="block text-xs font-medium text-label">Tenant ID</label>
                 <input type="text" name="tenant_id" class="input-field font-mono text-xs" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
@@ -338,6 +348,7 @@ $allPassed = array_reduce($requirements, fn($carry, $r) => $carry && $r[1], true
     <div class="card space-y-4">
         <h2 class="card-title">Create Admin Account</h2>
         <form method="POST" class="space-y-4">
+            <?= csrf_field() ?>
             <div class="space-y-1.5">
                 <label class="block text-xs font-medium text-label">Username</label>
                 <input type="text" name="username" class="input-field" placeholder="admin" required autocomplete="username">

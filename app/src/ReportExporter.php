@@ -218,7 +218,7 @@ final class ReportExporter
             foreach ($results['inactive'] as $u) {
                 $name  = htmlspecialchars($u['displayName'], ENT_QUOTES, 'UTF-8');
                 $email = htmlspecialchars($u['mail'], ENT_QUOTES, 'UTF-8');
-                $html .= "<tr><td>{$name}</td><td>{$email}</td><td>{$u['lastSignIn']}</td><td>{$u['licenseCount']}</td></tr>";
+                $html .= "<tr><td>{$name}</td><td>{$email}</td><td>" . htmlspecialchars((string)($u['lastSignIn'] ?? ''), ENT_QUOTES, 'UTF-8') . "</td><td>" . htmlspecialchars((string)($u['licenseCount'] ?? 0), ENT_QUOTES, 'UTF-8') . "</td></tr>";
             }
             $html .= '</table>';
         }
@@ -230,7 +230,7 @@ final class ReportExporter
             foreach ($results['blocked'] as $u) {
                 $name  = htmlspecialchars($u['displayName'], ENT_QUOTES, 'UTF-8');
                 $email = htmlspecialchars($u['mail'], ENT_QUOTES, 'UTF-8');
-                $html .= "<tr><td>{$name}</td><td>{$email}</td><td>{$u['licenseCount']}</td></tr>";
+                $html .= "<tr><td>{$name}</td><td>{$email}</td><td>" . htmlspecialchars((string)($u['licenseCount'] ?? 0), ENT_QUOTES, 'UTF-8') . "</td></tr>";
             }
             $html .= '</table>';
         }
@@ -241,7 +241,7 @@ final class ReportExporter
             $html .= '<table><tr><th>SKU</th><th>Total</th><th>Consumed</th><th>Available</th></tr>';
             foreach ($results['unassigned'] as $s) {
                 $name = htmlspecialchars($s['displayName'], ENT_QUOTES, 'UTF-8');
-                $html .= "<tr><td>{$name}</td><td>{$s['total']}</td><td>{$s['consumed']}</td><td>{$s['available']}</td></tr>";
+                $html .= "<tr><td>{$name}</td><td>" . htmlspecialchars((string)($s['total'] ?? 0), ENT_QUOTES, 'UTF-8') . "</td><td>" . htmlspecialchars((string)($s['consumed'] ?? 0), ENT_QUOTES, 'UTF-8') . "</td><td>" . htmlspecialchars((string)($s['available'] ?? 0), ENT_QUOTES, 'UTF-8') . "</td></tr>";
             }
             $html .= '</table>';
         }

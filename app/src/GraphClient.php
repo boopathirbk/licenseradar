@@ -77,7 +77,7 @@ final class GraphClient
             return $token;
         } catch (GuzzleException $e) {
             audit_log('graph_token_error', $e->getMessage());
-            throw new \RuntimeException('Failed to obtain Graph API access token: ' . $e->getMessage());
+            throw new \RuntimeException('Failed to obtain Graph API access token.');
         }
     }
 
