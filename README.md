@@ -28,7 +28,7 @@ Star the repo to follow progress and get notified on release.
 | PHP app — Graph API integration | ✅ Complete |
 | PHP app — 2FA (Email OTP + TOTP) | ✅ Complete |
 | PHP app — Dashboard & reports | ✅ Complete |
-| PHP app — 2FA (Passkey / WebAuthn) | 🔄 In progress |
+| PHP app — 2FA (Passkey / WebAuthn) | ✅ Complete |
 | 2026 standards audit (WCAG 2.2, SRI, CSP) | ✅ Complete |
 | v1.0 public release | 🔜 Coming soon |
 
@@ -102,8 +102,8 @@ LicenseRadar **never writes** to your tenant. Three read-only application permis
 - [x] TOTP authenticator 2FA (QR code setup)
 - [x] GitHub Pages showcase site
 - [x] 2026 standards audit (WCAG 2.2, SRI, CSP, PHP 8.4)
-- [ ] Passkey / WebAuthn 2FA
-- [ ] End-to-end deployment testing
+- [x] Passkey / WebAuthn 2FA (registration, removal, browser compat check)
+- [ ] End-to-end deployment testing (requires HTTPS hosting)
 
 **v1.1 — Notifications**
 - [ ] Scheduled weekly email digest

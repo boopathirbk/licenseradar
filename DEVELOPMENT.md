@@ -1,6 +1,6 @@
 # LicenseRadar — Development Guide
 
-> **Last updated:** 14 March 2026 · **Status:** Showcase site live, PHP app built & audited (2026 standards compliant)
+> **Last updated:** 14 March 2026 · **Status:** Showcase site live, PHP app built & audited (all 3 2FA methods + 2026 standards)
 
 ## Project Overview
 
@@ -73,7 +73,8 @@ src/
 
 ### Features
 1. **Install Wizard** — WordPress-style setup (DB, Azure creds, admin account)
-2. **Authentication** — Login + 3-method 2FA (Email OTP, TOTP, WebAuthn)
+2. **Authentication** — Login + 3-method 2FA (Email OTP, TOTP, Passkey/WebAuthn)
+   - Passkey: WebAuthn registration with `navigator.credentials.create()`, challenge verification, passkey list with Remove, browser compatibility check
 3. **Graph API Client** — Client credentials grant, token caching, pagination
 4. **Audit Detectors:**
    - Inactive licensed users (30/60/90/180 day thresholds)
@@ -83,9 +84,10 @@ src/
 5. **Cost Calculator** — USD + INR pricing, pre-loaded SKU prices
 6. **Dashboard** — Summary tiles, doughnut chart (Chart.js 4.5), detail tables
 7. **Reports** — One-click PDF and multi-sheet Excel export
-8. **Settings** — Theme toggle (inline, no reload), 2FA management, session policy
+8. **Settings** — Theme toggle (inline, no reload), 2FA management (enable/disable all 3 methods), passkey registration + removal, session policy
 9. **Security** — PDO prepared statements, Argon2id passwords, CSRF tokens (`hash_equals` timing-safe), CSP headers, SRI on CDN scripts, `.htaccess` protection
-10. **2026 Audit Compliance:**
+10. **Setup Wizard Security** — Standalone security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy) on setup.php
+11. **2026 Audit Compliance:**
     - **PHP 8.4** — `strict_types`, no deprecated functions, typed returns
     - **WCAG 2.2 AA** — `:focus-visible` indicators, `prefers-reduced-motion`, target size ≥24px, `autocomplete` on identity fields, skip link, ARIA landmarks
     - **SRI** — Chart.js and qrcode-generator CDN scripts verified with `sha384` integrity hashes

@@ -81,6 +81,116 @@ ob_start();
             </button>
         </form>
 
+        <!-- Passkey Sign-In -->
+        <div id="passkey-login-section" style="display:none">
+            <div class="flex items-center gap-3 my-2">
+                <div class="flex-1 h-px bg-current opacity-10"></div>
+                <span class="text-xs text-dimmed">or</span>
+                <div class="flex-1 h-px bg-current opacity-10"></div>
+            </div>
+            <button type="button" id="passkey-login-btn" class="btn-secondary w-full flex items-center justify-center gap-2" aria-label="Sign in with passkey">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                Sign in with Passkey
+            </button>
+        </div>
+
+        <script>
+        (function() {
+            // Only show passkey button if WebAuthn is supported
+            if (!window.PublicKeyCredential) return;
+            var section = document.getElementById('passkey-login-section');
+            var btn = document.getElementById('passkey-login-btn');
+            if (section) section.style.display = '';
+
+            if (!btn) return;
+            btn.addEventListener('click', async function() {
+                btn.disabled = true;
+                btn.textContent = 'Authenticating…';
+
+                // Submit the login form first to get pending_user_id,
+                // then redirect to 2fa with passkey method
+                var form = document.querySelector('form[action="?route=login"]');
+                var username = form.querySelector('#username').value.trim();
+                var password = form.querySelector('#password').value;
+
+                if (!username || !password) {
+                    alert('Please enter your username and password first, then click Sign in with Passkey.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Sign in with Passkey';
+                    return;
+                }
+
+                // Submit login via fetch to get the 2FA session set up
+                var formData = new FormData(form);
+                try {
+                    var loginRes = await fetch('?route=login', {
+                        method: 'POST',
+                        body: formData,
+                        redirect: 'manual'
+                    });
+
+                    // After password verified, session has pending_user_id
+                    // Now trigger passkey assertion
+                    var optRes = await fetch('?route=passkey/auth_options', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    var options = await optRes.json();
+                    if (options.error) throw new Error(options.error);
+
+                    function b64ToBuffer(b64) {
+                        var s = b64.replace(/-/g, '+').replace(/_/g, '/');
+                        while (s.length % 4) s += '=';
+                        var bin = atob(s);
+                        var buf = new Uint8Array(bin.length);
+                        for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+                        return buf.buffer;
+                    }
+                    function bufToB64(buf) {
+                        var bytes = new Uint8Array(buf);
+                        var s = '';
+                        bytes.forEach(function(b) { s += String.fromCharCode(b); });
+                        return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                    }
+
+                    options.challenge = b64ToBuffer(options.challenge);
+                    if (options.allowCredentials) {
+                        options.allowCredentials = options.allowCredentials.map(function(c) {
+                            c.id = b64ToBuffer(c.id);
+                            return c;
+                        });
+                    }
+
+                    var assertion = await navigator.credentials.get({ publicKey: options });
+
+                    var verifyRes = await fetch('?route=passkey/auth_verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: bufToB64(assertion.rawId),
+                            type: assertion.type,
+                            response: {
+                                clientDataJSON: bufToB64(assertion.response.clientDataJSON),
+                                authenticatorData: bufToB64(assertion.response.authenticatorData),
+                                signature: bufToB64(assertion.response.signature)
+                            }
+                        })
+                    });
+                    var result = await verifyRes.json();
+                    if (result.error) throw new Error(result.error);
+
+                    window.location.href = result.redirect || '?route=dashboard';
+                } catch (err) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Sign in with Passkey';
+                    if (err.name !== 'NotAllowedError') {
+                        alert('Passkey sign-in failed: ' + err.message);
+                    }
+                }
+            });
+        })();
+        </script>
+
         <p class="text-center text-xs text-dimmed">
             Free & open-source · <a href="https://github.com/boopathirbk/licenseradar" target="_blank" rel="noopener noreferrer" class="underline" aria-label="View source code on GitHub">View source</a>
         </p>

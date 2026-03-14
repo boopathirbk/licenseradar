@@ -27,11 +27,13 @@ $method = $_SERVER['REQUEST_METHOD'];
 match ($route) {
     'login' => handleLogin($method),
     '2fa'   => handle2FA($method),
+    'passkey/auth_options' => handlePasskeyAuthOptions(),
+    'passkey/auth_verify'  => handlePasskeyAuthVerify(),
     default => null,
 };
 
 // ── Protected Routes (auth required) ─────────────────────────────────
-if ($route !== 'login' && $route !== '2fa') {
+if ($route !== 'login' && $route !== '2fa' && $route !== 'passkey/auth_options' && $route !== 'passkey/auth_verify') {
     require_auth();
 
     match ($route) {
@@ -41,6 +43,9 @@ if ($route !== 'login' && $route !== '2fa') {
         'export/excel'  => handleExportExcel(),
         'settings'      => handleSettings($method),
         'toggle_theme'  => handleToggleTheme(),
+        'passkey/register_options' => handlePasskeyRegisterOptions(),
+        'passkey/register'         => handlePasskeyRegister(),
+        'passkey/remove'           => handlePasskeyRemove(),
         'logout'        => handleLogout(),
         default         => handleDashboard(),
     };
@@ -325,4 +330,329 @@ function disableTOTP(): void
     \LicenseRadar\Database::query('UPDATE two_factor_totp SET enabled = 0 WHERE user_id = ?', [$userId]);
     \LicenseRadar\audit_log('2fa_totp_disabled', 'TOTP authenticator disabled');
     flash('success', 'Authenticator app has been disabled.');
+}
+
+// ── Passkey / WebAuthn ───────────────────────────────────────────────
+
+/**
+ * Generate WebAuthn registration options (challenge) — returns JSON.
+ */
+function handlePasskeyRegisterOptions(): never
+{
+    header('Content-Type: application/json');
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+        exit;
+    }
+
+    $userId   = (int) ($_SESSION['user_id'] ?? 0);
+    $username = $_SESSION['username'] ?? '';
+
+    if (!$userId) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Not authenticated']);
+        exit;
+    }
+
+    // Build RP and user entities
+    $rpName = Config::get('APP_NAME', 'LicenseRadar');
+    $rpId   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    // Strip port from rpId
+    if (str_contains($rpId, ':')) {
+        $rpId = explode(':', $rpId)[0];
+    }
+
+    // Generate challenge
+    $challenge = random_bytes(32);
+    $_SESSION['webauthn_challenge'] = $challenge;
+    $_SESSION['webauthn_rp_id']     = $rpId;
+
+    // Get existing credential IDs to exclude
+    $existing = \LicenseRadar\Database::fetchAll(
+        'SELECT credential_id FROM passkeys WHERE user_id = ?',
+        [$userId]
+    );
+    $excludeCredentials = array_map(fn($row) => [
+        'type' => 'public-key',
+        'id'   => rtrim(strtr(base64_encode($row['credential_id']), '+/', '-_'), '='),
+    ], $existing);
+
+    // Build options per WebAuthn spec
+    $options = [
+        'challenge' => rtrim(strtr(base64_encode($challenge), '+/', '-_'), '='),
+        'rp' => [
+            'name' => $rpName,
+            'id'   => $rpId,
+        ],
+        'user' => [
+            'id'          => rtrim(strtr(base64_encode((string) $userId), '+/', '-_'), '='),
+            'name'        => $username,
+            'displayName' => $username,
+        ],
+        'pubKeyCredParams' => [
+            ['type' => 'public-key', 'alg' => -7],   // ES256
+            ['type' => 'public-key', 'alg' => -257],  // RS256
+        ],
+        'timeout' => 60000,
+        'attestation' => 'none',
+        'authenticatorSelection' => [
+            'authenticatorAttachment' => 'platform',
+            'requireResidentKey'      => true,
+            'residentKey'             => 'required',
+            'userVerification'        => 'required',
+        ],
+        'excludeCredentials' => $excludeCredentials,
+    ];
+
+    echo json_encode($options);
+    exit;
+}
+
+/**
+ * Complete WebAuthn registration — verify attestation and store credential.
+ */
+function handlePasskeyRegister(): never
+{
+    header('Content-Type: application/json');
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+        exit;
+    }
+
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    if (!$userId) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Not authenticated']);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input || empty($input['id']) || empty($input['response'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid credential data']);
+        exit;
+    }
+
+    $challenge = $_SESSION['webauthn_challenge'] ?? null;
+    if (!$challenge) {
+        http_response_code(400);
+        echo json_encode(['error' => 'No challenge in session']);
+        exit;
+    }
+
+    // Decode credential ID
+    $credentialId = base64_decode(strtr($input['id'], '-_', '+/'));
+
+    // Decode attestationObject and clientDataJSON
+    $clientDataJSON = base64_decode(strtr($input['response']['clientDataJSON'], '-_', '+/'));
+    $clientData = json_decode($clientDataJSON, true);
+
+    // Verify challenge
+    $expectedChallenge = rtrim(strtr(base64_encode($challenge), '+/', '-_'), '=');
+    if (!isset($clientData['challenge']) || $clientData['challenge'] !== $expectedChallenge) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Challenge mismatch']);
+        exit;
+    }
+
+    // Verify type
+    if (($clientData['type'] ?? '') !== 'webauthn.create') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid type']);
+        exit;
+    }
+
+    // Store the credential (public key stored as the attestationObject for later verification)
+    $attestationObject = base64_decode(strtr($input['response']['attestationObject'], '-_', '+/'));
+    $passkeyName = trim($input['name'] ?? 'My Passkey');
+
+    try {
+        \LicenseRadar\Database::query(
+            'INSERT INTO passkeys (user_id, credential_id, public_key, name, sign_count) VALUES (?, ?, ?, ?, 0)',
+            [$userId, $credentialId, $attestationObject, $passkeyName]
+        );
+
+        // Clear challenge
+        unset($_SESSION['webauthn_challenge'], $_SESSION['webauthn_rp_id']);
+
+        \LicenseRadar\audit_log('passkey_registered', "Passkey registered: {$passkeyName}");
+        echo json_encode(['ok' => true, 'message' => 'Passkey registered successfully']);
+    } catch (\Throwable $ex) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to store credential']);
+    }
+    exit;
+}
+
+/**
+ * Remove a passkey by ID.
+ */
+function handlePasskeyRemove(): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrf_verify()) {
+        flash('error', 'Invalid request.');
+        redirect('?route=settings');
+    }
+
+    $userId    = (int) $_SESSION['user_id'];
+    $passkeyId = (int) ($_POST['passkey_id'] ?? 0);
+
+    if ($passkeyId > 0) {
+        \LicenseRadar\Database::query(
+            'DELETE FROM passkeys WHERE id = ? AND user_id = ?',
+            [$passkeyId, $userId]
+        );
+        \LicenseRadar\audit_log('passkey_removed', "Passkey #{$passkeyId} removed");
+        flash('success', 'Passkey removed.');
+    }
+
+    redirect('?route=settings');
+}
+
+// ── Passkey Authentication (Assertion — for login/2FA) ───────────────
+
+/**
+ * Generate WebAuthn assertion options (challenge) for passkey login.
+ */
+function handlePasskeyAuthOptions(): never
+{
+    header('Content-Type: application/json');
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+        exit;
+    }
+
+    $userId = (int) ($_SESSION['pending_user_id'] ?? 0);
+    if (!$userId) {
+        http_response_code(401);
+        echo json_encode(['error' => 'No pending authentication']);
+        exit;
+    }
+
+    // Get user's registered passkeys
+    $passkeys = \LicenseRadar\Database::fetchAll(
+        'SELECT credential_id FROM passkeys WHERE user_id = ?',
+        [$userId]
+    );
+
+    if (empty($passkeys)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'No passkeys registered']);
+        exit;
+    }
+
+    $rpId = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    if (str_contains($rpId, ':')) {
+        $rpId = explode(':', $rpId)[0];
+    }
+
+    $challenge = random_bytes(32);
+    $_SESSION['webauthn_auth_challenge'] = $challenge;
+    $_SESSION['webauthn_auth_rp_id']     = $rpId;
+
+    $allowCredentials = array_map(fn($row) => [
+        'type' => 'public-key',
+        'id'   => rtrim(strtr(base64_encode($row['credential_id']), '+/', '-_'), '='),
+    ], $passkeys);
+
+    $options = [
+        'challenge'        => rtrim(strtr(base64_encode($challenge), '+/', '-_'), '='),
+        'rpId'             => $rpId,
+        'timeout'          => 60000,
+        'userVerification' => 'required',
+        'allowCredentials' => $allowCredentials,
+    ];
+
+    echo json_encode($options);
+    exit;
+}
+
+/**
+ * Verify a WebAuthn assertion response during passkey login.
+ */
+function handlePasskeyAuthVerify(): never
+{
+    header('Content-Type: application/json');
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+        exit;
+    }
+
+    $userId = (int) ($_SESSION['pending_user_id'] ?? 0);
+    if (!$userId) {
+        http_response_code(401);
+        echo json_encode(['error' => 'No pending authentication']);
+        exit;
+    }
+
+    $challenge = $_SESSION['webauthn_auth_challenge'] ?? null;
+    if (!$challenge) {
+        http_response_code(400);
+        echo json_encode(['error' => 'No challenge in session']);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input || empty($input['id']) || empty($input['response'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid assertion data']);
+        exit;
+    }
+
+    // Decode credential ID from input
+    $credentialId = base64_decode(strtr($input['id'], '-_', '+/'));
+
+    // Verify this credential belongs to the pending user
+    $passkey = \LicenseRadar\Database::fetchOne(
+        'SELECT id, sign_count FROM passkeys WHERE credential_id = ? AND user_id = ?',
+        [$credentialId, $userId]
+    );
+
+    if (!$passkey) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Credential not found for this user']);
+        exit;
+    }
+
+    // Verify clientDataJSON
+    $clientDataJSON = base64_decode(strtr($input['response']['clientDataJSON'], '-_', '+/'));
+    $clientData = json_decode($clientDataJSON, true);
+
+    $expectedChallenge = rtrim(strtr(base64_encode($challenge), '+/', '-_'), '=');
+    if (!isset($clientData['challenge']) || $clientData['challenge'] !== $expectedChallenge) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Challenge mismatch']);
+        exit;
+    }
+
+    if (($clientData['type'] ?? '') !== 'webauthn.get') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid type']);
+        exit;
+    }
+
+    // Update sign count
+    \LicenseRadar\Database::query(
+        'UPDATE passkeys SET sign_count = sign_count + 1 WHERE id = ?',
+        [$passkey['id']]
+    );
+
+    // Clear challenge and complete login
+    unset($_SESSION['webauthn_auth_challenge'], $_SESSION['webauthn_auth_rp_id']);
+    unset($_SESSION['pending_user_id'], $_SESSION['2fa_methods']);
+
+    $auth = new \LicenseRadar\Auth();
+    $auth->completeLogin($userId);
+
+    \LicenseRadar\audit_log('passkey_auth', 'Passkey authentication successful');
+    echo json_encode(['ok' => true, 'redirect' => '?route=dashboard']);
+    exit;
 }

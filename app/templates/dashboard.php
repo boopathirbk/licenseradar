@@ -94,6 +94,7 @@ ob_start();
                 document.addEventListener('DOMContentLoaded', function() {
                     const ctx = document.getElementById('waste-chart');
                     if (ctx && typeof Chart !== 'undefined') {
+                        var legendColor = document.documentElement.classList.contains('light') ? '#71717a' : '#a1a1aa';
                         new Chart(ctx, {
                             type: 'doughnut',
                             data: {
@@ -117,7 +118,7 @@ ob_start();
                                     legend: {
                                         position: 'bottom',
                                         labels: {
-                                            color: '<?= $isDark ? '#a1a1aa' : '#71717a' ?>',
+                                            color: legendColor,
                                             padding: 12,
                                             usePointStyle: true,
                                             pointStyleWidth: 8,
@@ -147,7 +148,7 @@ ob_start();
                                 <td class="font-medium"><?= e($u['displayName']) ?></td>
                                 <td><?= e($u['mail']) ?></td>
                                 <td><?= e($u['lastSignIn']) ?></td>
-                                <td><?= $u['licenseCount'] ?></td>
+                                <td><?= e((string)$u['licenseCount']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -171,7 +172,7 @@ ob_start();
                             <tr>
                                 <td class="font-medium"><?= e($u['displayName']) ?></td>
                                 <td><?= e($u['mail']) ?></td>
-                                <td><?= $u['licenseCount'] ?></td>
+                                <td><?= e((string)$u['licenseCount']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -191,9 +192,9 @@ ob_start();
                         <?php foreach ($results['unassigned'] as $s): ?>
                             <tr>
                                 <td class="font-medium"><?= e($s['displayName']) ?></td>
-                                <td><?= $s['total'] ?></td>
-                                <td><?= $s['consumed'] ?></td>
-                                <td class="font-semibold text-amber-500"><?= $s['available'] ?></td>
+                                <td><?= e((string)$s['total']) ?></td>
+                                <td><?= e((string)$s['consumed']) ?></td>
+                                <td class="font-semibold text-amber-500"><?= e((string)$s['available']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>

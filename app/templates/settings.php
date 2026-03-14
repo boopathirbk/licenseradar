@@ -14,14 +14,17 @@ try {
     $emailEnabled = LicenseRadar\Database::fetchOne('SELECT enabled FROM two_factor_email WHERE user_id = ?', [$userId]);
     $totpEnabled  = LicenseRadar\Database::fetchOne('SELECT enabled, secret FROM two_factor_totp WHERE user_id = ?', [$userId]);
     $passkeyCount = LicenseRadar\Database::fetchOne('SELECT COUNT(*) as cnt FROM passkeys WHERE user_id = ?', [$userId]);
+    $passkeys = LicenseRadar\Database::fetchAll('SELECT id, name, created_at FROM passkeys WHERE user_id = ? ORDER BY created_at DESC', [$userId]);
 } catch (\Throwable $ex) {
     $emailEnabled = null;
     $totpEnabled  = null;
     $passkeyCount = null;
+    $passkeys = [];
 }
 
-$isEmailOn = $emailEnabled && (int) $emailEnabled['enabled'] === 1;
-$isTotpOn  = $totpEnabled && (int) $totpEnabled['enabled'] === 1;
+$isEmailOn  = $emailEnabled && (int) $emailEnabled['enabled'] === 1;
+$isTotpOn   = $totpEnabled && (int) $totpEnabled['enabled'] === 1;
+$hasPasskey = $passkeyCount && (int) $passkeyCount['cnt'] > 0;
 
 $pageTitle = 'Settings';
 ob_start();
@@ -209,23 +212,137 @@ ob_start();
             </div>
 
             <!-- Passkey / WebAuthn -->
-            <div class="twofa-row">
-                <div class="flex items-center gap-3">
-                    <div class="twofa-icon twofa-icon-emerald">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                    </div>
-                    <div>
-                        <div class="text-sm font-medium text-body">Passkey / WebAuthn</div>
-                        <div class="text-xs text-muted">
-                            <?php if ($passkeyCount && (int) $passkeyCount['cnt'] > 0): ?>
-                                <?= $passkeyCount['cnt'] ?> passkey(s) registered
-                            <?php else: ?>
-                                Hardware key, biometric, or platform authenticator
-                            <?php endif; ?>
+            <div class="twofa-row-expandable">
+                <div class="twofa-row-header">
+                    <div class="flex items-center gap-3">
+                        <div class="twofa-icon twofa-icon-emerald">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-body">Passkey / WebAuthn</div>
+                            <div class="text-xs text-muted">
+                                <?php if ($hasPasskey): ?>
+                                    <?= e((string)$passkeyCount['cnt']) ?> passkey(s) registered
+                                <?php else: ?>
+                                    Face ID, Touch ID, Windows Hello, or security key
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <?php if ($hasPasskey): ?>
+                            <span class="badge badge-emerald">Enabled</span>
+                        <?php endif; ?>
+                        <button type="button" id="passkey-setup-btn" class="btn-sm-secondary" aria-label="Register a new passkey">
+                            <?= $hasPasskey ? 'Add' : 'Setup' ?>
+                        </button>
+                    </div>
                 </div>
-                <span class="text-xs text-dimmed">Coming soon</span>
+
+                <?php if ($hasPasskey && !empty($passkeys)): ?>
+                <div class="totp-setup-panel">
+                    <p class="text-xs text-muted mb-2">Registered passkeys:</p>
+                    <?php foreach ($passkeys as $pk): ?>
+                    <div class="flex items-center justify-between py-1">
+                        <div>
+                            <span class="text-xs font-medium text-body"><?= e($pk['name'] ?? 'Passkey') ?></span>
+                            <span class="text-xs text-dimmed ml-2">Added <?= e(LicenseRadar\time_ago($pk['created_at'])) ?></span>
+                        </div>
+                        <form method="POST" action="?route=passkey/remove" style="display:inline">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="passkey_id" value="<?= (int) $pk['id'] ?>">
+                            <button type="submit" class="btn-sm-secondary" aria-label="Remove passkey <?= e($pk['name'] ?? 'Passkey') ?>">Remove</button>
+                        </form>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Passkey Registration Script -->
+                <script>
+                (function() {
+                    var btn = document.getElementById('passkey-setup-btn');
+                    if (!btn) return;
+
+                    // Check WebAuthn support
+                    if (!window.PublicKeyCredential) {
+                        btn.textContent = 'Not supported';
+                        btn.disabled = true;
+                        btn.setAttribute('aria-disabled', 'true');
+                        btn.title = 'WebAuthn is not supported in this browser';
+                        return;
+                    }
+
+                    btn.addEventListener('click', async function() {
+                        btn.disabled = true;
+                        btn.textContent = 'Registering…';
+
+                        try {
+                            // 1. Fetch creation options from server
+                            var optRes = await fetch('?route=passkey/register_options', {
+                                method: 'POST',
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+                            var options = await optRes.json();
+                            if (options.error) throw new Error(options.error);
+
+                            // 2. Convert base64url strings to ArrayBuffer
+                            function b64ToBuffer(b64) {
+                                var s = b64.replace(/-/g, '+').replace(/_/g, '/');
+                                while (s.length % 4) s += '=';
+                                var bin = atob(s);
+                                var buf = new Uint8Array(bin.length);
+                                for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+                                return buf.buffer;
+                            }
+                            function bufToB64(buf) {
+                                var bytes = new Uint8Array(buf);
+                                var s = '';
+                                bytes.forEach(function(b) { s += String.fromCharCode(b); });
+                                return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                            }
+
+                            options.challenge = b64ToBuffer(options.challenge);
+                            options.user.id = b64ToBuffer(options.user.id);
+                            if (options.excludeCredentials) {
+                                options.excludeCredentials = options.excludeCredentials.map(function(c) {
+                                    c.id = b64ToBuffer(c.id);
+                                    return c;
+                                });
+                            }
+
+                            // 3. Create credential via WebAuthn API
+                            var credential = await navigator.credentials.create({ publicKey: options });
+
+                            // 4. Send attestation to server
+                            var regRes = await fetch('?route=passkey/register', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    id: bufToB64(credential.rawId),
+                                    type: credential.type,
+                                    name: 'My Passkey',
+                                    response: {
+                                        clientDataJSON: bufToB64(credential.response.clientDataJSON),
+                                        attestationObject: bufToB64(credential.response.attestationObject)
+                                    }
+                                })
+                            });
+                            var result = await regRes.json();
+                            if (result.error) throw new Error(result.error);
+
+                            // Success — reload to show the new passkey
+                            window.location.reload();
+                        } catch (err) {
+                            btn.disabled = false;
+                            btn.textContent = '<?= $hasPasskey ? 'Add' : 'Setup' ?>';
+                            if (err.name !== 'NotAllowedError') {
+                                alert('Passkey registration failed: ' + err.message);
+                            }
+                        }
+                    });
+                })();
+                </script>
             </div>
         </div>
     </section>

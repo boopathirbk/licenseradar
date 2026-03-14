@@ -136,12 +136,13 @@ const Security: React.FC = () => {
                     </h2>
                     <div className="rounded-xl border dark:border-zinc-800/60 border-zinc-200 overflow-hidden">
                         <pre className="p-5 text-sm font-mono dark:bg-zinc-900/60 bg-zinc-50 dark:text-zinc-300 text-zinc-700 overflow-x-auto leading-relaxed">
-{`Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com;
+{`Content-Security-Policy: default-src 'self'; script-src 'self' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com;
 X-Frame-Options: DENY
 X-Content-Type-Options: nosniff
 Referrer-Policy: strict-origin-when-cross-origin
 Strict-Transport-Security: max-age=31536000; includeSubDomains
-Permissions-Policy: camera=(), microphone=(), geolocation=()`}
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+All CDN scripts include integrity="sha384-..." (Subresource Integrity)`}
                         </pre>
                     </div>
                 </section>
@@ -155,8 +156,10 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()`}
                         {[
                             { title: 'SQL Injection', desc: 'PDO prepared statements with explicit parameter binding on every query.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
                             { title: 'XSS Prevention', desc: 'htmlspecialchars() output encoding on every user-facing variable.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
-                            { title: 'CSRF Tokens', desc: 'Per-session CSRF tokens on every POST form.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
+                            { title: 'CSRF Tokens', desc: 'Per-session CSRF tokens with timing-safe hash_equals() on every POST form and fetch.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
                             { title: 'Password Storage', desc: 'password_hash() with PASSWORD_ARGON2ID (bcrypt fallback).', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
+                            { title: 'SRI Protection', desc: 'All CDN scripts verified with sha384 integrity hashes + crossorigin="anonymous".', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
+                            { title: 'WCAG 2.2 AA', desc: 'Focus-visible indicators, prefers-reduced-motion, 24px target size, autocomplete, skip links.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
                             { title: 'Client Secret', desc: 'Stored server-side in .env — never exposed to frontend or logs.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
                             { title: 'Audit Log', desc: 'Every login, export, and config change is timestamped with user + IP.', icon: <ICONS.ShieldCheck className="w-4 h-4 text-emerald-500" /> },
                         ].map((item, i) => (

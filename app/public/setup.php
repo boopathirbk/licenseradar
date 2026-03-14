@@ -18,6 +18,17 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// ── Security Headers (standalone — not going through bootstrap.php) ──
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 0');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'");
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
+
 // If already installed, redirect to app
 Config::load(dirname(__DIR__) . '/.env');
 if (Config::isInstalled()) {

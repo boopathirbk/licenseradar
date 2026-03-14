@@ -209,7 +209,7 @@ final class Auth
             [$userId]
         );
 
-        if (!$record || $record['code'] !== $code) {
+        if (!$record || !hash_equals($record['code'] ?? '', $code)) {
             return false;
         }
 
